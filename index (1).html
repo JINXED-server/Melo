@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galaxia de Tulipanes y Rosas — Agustina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --fucsia: #ff2fd6;
+    --fucsia-soft: #ff8bef;
+    --rose-red: #ff1050;
+    --violet: #7b2cff;
+    --cyan: #35f5ff;
+    --ink: #05010f;
+    --text-light: #f6ecff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    height:100%;
+    background: var(--ink);
+    overflow:hidden;
+    font-family:'Poppins', sans-serif;
+    touch-action:none;
+  }
+
+  #scene-canvas{
+    position:fixed; inset:0;
+    display:block;
+    cursor:grab;
+    z-index:0;
+  }
+  #scene-canvas:active{ cursor:grabbing; }
+
+  .vignette{
+    position:fixed; inset:0; pointer-events:none;
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(2,0,10,0.8) 100%);
+    z-index:1;
+  }
+
+  #flash{
+    position:fixed; inset:0; z-index:15;
+    background: radial-gradient(circle at center, rgba(255,220,250,1) 0%, rgba(255,47,214,0.85) 35%, rgba(123,44,255,0.4) 70%, transparent 100%);
+    opacity:0;
+    pointer-events:none;
+    transition: opacity .55s ease;
+  }
+  #flash.show{ opacity:1; transition: opacity .35s ease; }
+
+  /* ---------- páginas ---------- */
+  .page{
+    position:fixed; inset:0; z-index:5;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding: 24px;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 1s ease;
+  }
+  .page:not(.active) *{ pointer-events:none; }
+  .page.active{ opacity:1; pointer-events:none; }
+
+  /* ---------- PÁGINA 1 ---------- */
+  #page-galaxy h1{
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(22px, 6vw, 40px);
+    background: linear-gradient(90deg, var(--fucsia-soft), var(--rose-red), var(--fucsia-soft));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow: 0 0 30px rgba(255,47,214,0.5);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  #page-galaxy .tag{
+    font-family:'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: clamp(14px, 3vw, 19px);
+    color: rgba(246,236,255,0.75);
+    letter-spacing: 1px;
+    margin-bottom: 46px;
+  }
+
+  .enter-btn{
+    pointer-events:auto;
+    padding: 15px 34px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,139,239,0.55);
+    background: linear-gradient(135deg, rgba(123,44,255,0.25), rgba(255,16,80,0.25));
+    backdrop-filter: blur(8px);
+    color: var(--text-light);
+    font-size: 14px;
+    letter-spacing: 3px;
+    cursor:pointer;
+    box-shadow: 0 0 30px rgba(255,47,214,0.35);
+    transition: box-shadow .35s ease, transform .2s ease, background .35s ease;
+  }
+  .enter-btn:hover{
+    box-shadow: 0 0 50px rgba(255,47,214,0.6);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(123,44,255,0.4), rgba(255,16,80,0.4));
+  }
+
+  .hint{
+    position:fixed;
+    left:16px; bottom:18px;
+    z-index:6;
+    font-size: 11px;
+    color: rgba(246,236,255,0.5);
+    letter-spacing:0.5px;
+    pointer-events:none;
+    transition: opacity .4s ease;
+  }
+
+  .zoom-controls{
+    position:fixed;
+    right:16px; bottom:16px;
+    z-index:7;
+    display:flex;
+    gap:8px;
+    pointer-events:none;
+  }
+  .zoom-controls button{
+    width:42px; height:42px;
+    border:1px solid rgba(255,139,239,0.55);
+    border-radius:50%;
+    background:rgba(18,6,38,0.72);
+    color:var(--text-light);
+    font-size:24px;
+    line-height:1;
+    cursor:pointer;
+    pointer-events:auto;
+    box-shadow:0 0 18px rgba(255,47,214,0.3);
+  }
+  .zoom-controls button:active{ transform:scale(0.94); }
+
+  /* ---------- PÁGINA 2 — CARTA ---------- */
+  #page-letter{
+    overflow-y:auto;
+  }
+  .letter-card{
+    pointer-events:auto;
+    max-width: 460px;
+    width:100%;
+    background: rgba(18,6,38,0.4);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 26px;
+    padding: 38px 30px;
+    box-shadow: 0 0 60px rgba(255,47,214,0.22), 0 0 120px rgba(123,44,255,0.15), inset 0 0 40px rgba(255,255,255,0.03);
+    margin: 20px 0;
+  }
+  .letter-eyebrow{
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan);
+    margin-bottom: 14px;
+  }
+  .letter-card h2{
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(24px, 6vw, 34px);
+    background: linear-gradient(90deg, var(--fucsia), var(--rose-red));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    margin-bottom: 20px;
+  }
+  .letter-body{
+    font-family:'Cormorant Garamond', serif;
+    font-size: clamp(16px, 3.4vw, 19px);
+    line-height: 1.85;
+    color: rgba(246,236,255,0.92);
+  }
+  .letter-body p{ margin-bottom: 16px; }
+  .letter-final{
+    margin-top: 6px;
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(14px, 3vw, 17px);
+    color: var(--fucsia-soft);
+    text-shadow: 0 0 16px rgba(255,47,214,0.5);
+  }
+  .back-btn{
+    margin-top: 28px;
+    pointer-events:auto;
+    padding: 13px 28px;
+    border-radius: 999px;
+    border: 1px solid rgba(53,245,255,0.4);
+    background: rgba(10,20,35,0.4);
+    color: var(--text-light);
+    font-size: 13px;
+    letter-spacing: 2px;
+    cursor:pointer;
+    box-shadow: 0 0 20px rgba(53,245,255,0.25);
+    transition: box-shadow .3s ease, transform .2s ease;
+  }
+  .back-btn:hover{ box-shadow: 0 0 35px rgba(53,245,255,0.45); transform: translateY(-2px); }
+
+  .loading{
+    position:fixed; inset:0; z-index:30;
+    background: var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    color: rgba(246,236,255,0.5);
+    font-size: 13px;
+    letter-spacing: 3px;
+    transition: opacity .6s ease;
+  }
+
+  @media (max-width: 420px){
+    .letter-card{ padding: 28px 20px; border-radius: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">ENCENDIENDO ESTRELLAS…</div>
+
+<canvas id="scene-canvas"></canvas>
+<div class="vignette"></div>
+<div id="flash"></div>
+
+<!-- ================= PÁGINA 1: GALAXIA ================= -->
+<section id="page-galaxy" class="page active">
+  <h1>🌷 GALAXIA DE TULIPANES Y ROSAS 🌹</h1>
+  <div class="tag">Un universo creado para Agustina</div>
+  <button class="enter-btn" id="enter-btn">ENTRAR AL UNIVERSO ✦</button>
+</section>
+
+<div class="hint">🌐 &nbsp;Desliza con un dedo para girar 180° &nbsp;|&nbsp; Pellizca para hacer zoom</div>
+<div class="zoom-controls" aria-label="Controles de zoom">
+  <button id="zoom-out" type="button" aria-label="Alejar">−</button>
+  <button id="zoom-in" type="button" aria-label="Acercar">+</button>
+</div>
+
+<!-- ================= PÁGINA 2: CARTA ================= -->
+<section id="page-letter" class="page">
+  <div class="letter-card">
+    <div class="letter-eyebrow">✨ PARA AGUSTINA ✨</div>
+    <h2>Feliz Cumpleaños 🌷🌹</h2>
+    <div class="letter-body">
+      <p>Hoy el universo tiene un brillo diferente, porque celebra la existencia de una persona especial.</p>
+      <p>Que este nuevo año de vida esté lleno de momentos bonitos, sonrisas, sueños cumplidos y muchas razones para ser feliz.</p>
+      <p>Un espacio donde sobren las risas por chistes internos, las historias improvisadas y las pláticas que duran horas sin darse cuenta.</p>
+      <p>Feliz cumpleaños, Agustina. ✨</p>
+    </div>
+    <div class="letter-final">"Que nunca te falten motivos para sonreír."</div>
+    <br>
+    <button class="back-btn" id="back-btn">← VOLVER A LA GALAXIA</button>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+window.addEventListener('load', init);
+
+function init(){
+  const canvas = document.getElementById('scene-canvas');
+  const scene = new THREE.Scene();
+
+  const camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 300);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  // ============================================================
+  // TEXTURAS GENERADAS POR CANVAS
+  // ============================================================
+  function makeGlowTexture(hex){
+    const size = 256;
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+    grad.addColorStop(0, hex + 'ff');
+    grad.addColorStop(0.4, hex + '88');
+    grad.addColorStop(1, hex + '00');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,size,size);
+    return new THREE.CanvasTexture(c);
+  }
+
+  function makeEmojiTexture(emoji){
+    const size = 128;
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.font = size*0.78 + 'px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, size/2, size/2 + 8);
+    return new THREE.CanvasTexture(c);
+  }
+
+  function makePetalTexture(hex){
+    const size = 128;
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.translate(size/2, size/2);
+    ctx.beginPath();
+    ctx.moveTo(0,-size*0.42);
+    ctx.bezierCurveTo(size*0.38,-size*0.3, size*0.32,size*0.32, 0,size*0.44);
+    ctx.bezierCurveTo(-size*0.32,size*0.32, -size*0.38,-size*0.3, 0,-size*0.42);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0,-size*0.42,0,size*0.44);
+    grad.addColorStop(0, hex + 'ff');
+    grad.addColorStop(1, hex + '55');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    return new THREE.CanvasTexture(c);
+  }
+
+  const glowFucsia = makeGlowTexture('#ff2fd6');
+  const glowRed    = makeGlowTexture('#ff1050');
+  const glowViolet = makeGlowTexture('#7b2cff');
+  const glowWarm   = makeGlowTexture('#fff2c7');
+  const tulipTex   = makeEmojiTexture('🌷');
+  const roseTex    = makeEmojiTexture('🌹');
+  const petalFucsiaTex = makePetalTexture('#ff2fd6');
+  const petalRedTex    = makePetalTexture('#ff1050');
+
+  // ============================================================
+  // RIG ROTABLE (galaxia completa)
+  // ============================================================
+  const rig = new THREE.Group();
+  scene.add(rig);
+
+  // ---------- Partículas espirales de la galaxia ----------
+  const gp = {
+    count: 16000,
+    radius: 7,
+    branches: 4,
+    spin: 1.35,
+    randomness: 0.5,
+    randomnessPower: 2.8,
+    inside: new THREE.Color('#fff2c7'),
+    mid: new THREE.Color('#ff2fd6'),
+    outside: new THREE.Color('#ff1050')
+  };
+  const galaxyGeom = new THREE.BufferGeometry();
+  const gPos = new Float32Array(gp.count*3);
+  const gCol = new Float32Array(gp.count*3);
+  for(let i=0;i<gp.count;i++){
+    const i3=i*3;
+    const r = Math.random()*gp.radius;
+    const spinA = r*gp.spin;
+    const branchA = ((i%gp.branches)/gp.branches)*Math.PI*2;
+    const rx = Math.pow(Math.random(),gp.randomnessPower)*(Math.random()<0.5?1:-1)*gp.randomness*r;
+    const ry = Math.pow(Math.random(),gp.randomnessPower)*(Math.random()<0.5?1:-1)*gp.randomness*0.35;
+    const rz = Math.pow(Math.random(),gp.randomnessPower)*(Math.random()<0.5?1:-1)*gp.randomness*r;
+    gPos[i3]   = Math.cos(branchA+spinA)*r + rx;
+    gPos[i3+1] = ry;
+    gPos[i3+2] = Math.sin(branchA+spinA)*r + rz;
+    const t = r/gp.radius;
+    const mixed = t<0.5 ? gp.inside.clone().lerp(gp.mid,t*2) : gp.mid.clone().lerp(gp.outside,(t-0.5)*2);
+    gCol[i3]=mixed.r; gCol[i3+1]=mixed.g; gCol[i3+2]=mixed.b;
+  }
+  galaxyGeom.setAttribute('position', new THREE.BufferAttribute(gPos,3));
+  galaxyGeom.setAttribute('color', new THREE.BufferAttribute(gCol,3));
+  const galaxyMat = new THREE.PointsMaterial({
+    size:0.055, sizeAttenuation:true, depthWrite:false,
+    blending:THREE.AdditiveBlending, vertexColors:true, transparent:true, opacity:0.9
+  });
+  const galaxyPoints = new THREE.Points(galaxyGeom, galaxyMat);
+  rig.add(galaxyPoints);
+
+  // ---------- Micro-partículas luminosas lentas ----------
+  const dustCount = 500;
+  const dustGeom = new THREE.BufferGeometry();
+  const dustPos = new Float32Array(dustCount*3);
+  for(let i=0;i<dustCount;i++){
+    dustPos[i*3]   = (Math.random()-0.5)*16;
+    dustPos[i*3+1] = (Math.random()-0.5)*4;
+    dustPos[i*3+2] = (Math.random()-0.5)*16;
+  }
+  dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPos,3));
+  const dustMat = new THREE.PointsMaterial({
+    size:0.09, color:0xffe6fb, transparent:true, opacity:0.7,
+    blending:THREE.AdditiveBlending, depthWrite:false
+  });
+  const dustPoints = new THREE.Points(dustGeom, dustMat);
+  rig.add(dustPoints);
+
+  // ---------- Nebulosas ----------
+  const nebulae = [];
+  const nebulaTexColors = [glowFucsia, glowViolet, glowRed];
+  for(let i=0;i<5;i++){
+    const tex = nebulaTexColors[i % nebulaTexColors.length];
+    const mat = new THREE.SpriteMaterial({ map:tex, transparent:true, opacity:0.16+Math.random()*0.1, blending:THREE.AdditiveBlending, depthWrite:false });
+    const s = new THREE.Sprite(mat);
+    const scale = 5 + Math.random()*5;
+    s.scale.set(scale, scale, 1);
+    s.position.set((Math.random()-0.5)*10, (Math.random()-0.5)*3, (Math.random()-0.5)*10);
+    s.material.rotation = Math.random()*Math.PI;
+    rig.add(s);
+    nebulae.push(s);
+  }
+
+  // ---------- Núcleo luminoso ----------
+  const coreGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowWarm, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false
+  }));
+  coreGlow.scale.set(3.2,3.2,1);
+  rig.add(coreGlow);
+
+  const planet = new THREE.Mesh(
+    new THREE.SphereGeometry(1.05, 48, 48),
+    new THREE.MeshBasicMaterial({ color: 0x3a0a45 })
+  );
+  rig.add(planet);
+
+  const planetGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(1.45, 32, 32),
+    new THREE.MeshBasicMaterial({ color:0xff2fd6, transparent:true, opacity:0.18, blending:THREE.AdditiveBlending, side:THREE.BackSide })
+  );
+  rig.add(planetGlow);
+
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.55, 2.4, 64),
+    new THREE.MeshBasicMaterial({ color:0xff1050, transparent:true, opacity:0.35, side:THREE.DoubleSide, blending:THREE.AdditiveBlending })
+  );
+  ring.rotation.x = Math.PI/2.3;
+  rig.add(ring);
+
+  // ---------- Flores en brazos espirales (con halo) ----------
+  const flowers = [];
+  function addFlowerSpiral(texture, glowTex, count, branchOffset, radiusRange, sizeBase){
+    for(let i=0;i<count;i++){
+      const r = radiusRange[0] + Math.random()*(radiusRange[1]-radiusRange[0]);
+      const branchA = ((i % gp.branches)/gp.branches)*Math.PI*2 + branchOffset;
+      const baseAngle = branchA + r*gp.spin*0.6;
+
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, transparent:true, opacity:0.55, blending:THREE.AdditiveBlending, depthWrite:false
+      }));
+      const scale = sizeBase * (1.1 + Math.random()*0.5);
+      halo.scale.set(scale*1.8, scale*1.8, 1);
+      rig.add(halo);
+
+      const bloom = new THREE.Sprite(new THREE.SpriteMaterial({ map:texture, transparent:true }));
+      bloom.scale.set(scale, scale, 1);
+      rig.add(bloom);
+
+      flowers.push({
+        halo, bloom,
+        angle: baseAngle,
+        radius: r,
+        orbitSpeed: (0.05 + Math.random()*0.08) * (Math.random()<0.5?1:-1),
+        depthPhase: Math.random()*Math.PI*2,
+        depthSpeed: 0.4 + Math.random()*0.5,
+        depthAmp: 0.5 + Math.random()*0.6,
+        yBase: (Math.random()-0.5)*1.4
+      });
+    }
+  }
+
+  addFlowerSpiral(tulipTex, glowFucsia, 16, 0,    [1.8, 6.2], 0.55);
+  addFlowerSpiral(roseTex,  glowRed,    14, 0.35, [2.2, 6.6], 0.5);
+
+  function updateFlowers(t){
+    flowers.forEach(f=>{
+      const a = f.angle + t*f.orbitSpeed;
+      const depth = Math.sin(t*f.depthSpeed + f.depthPhase) * f.depthAmp;
+      const r = f.radius + depth;
+      const x = Math.cos(a)*r;
+      const z = Math.sin(a)*r;
+      const y = f.yBase + Math.sin(t*0.6 + f.depthPhase)*0.2;
+      f.bloom.position.set(x,y,z);
+      f.halo.position.set(x,y,z);
+      f.halo.material.opacity = 0.4 + Math.sin(t*1.5+f.depthPhase)*0.15;
+    });
+  }
+
+  // ---------- Estrellas de fondo (fijas, fuera del rig) ----------
+  const starGeom = new THREE.BufferGeometry();
+  const starCount = 1400;
+  const starPos = new Float32Array(starCount*3);
+  for(let i=0;i<starCount;i++){
+    starPos[i*3]   = (Math.random()-0.5)*90;
+    starPos[i*3+1] = (Math.random()-0.5)*90;
+    starPos[i*3+2] = (Math.random()-0.5)*90;
+  }
+  starGeom.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+  const starMat = new THREE.PointsMaterial({ size:0.06, color:0xffffff, transparent:true, opacity:0.6 });
+  scene.add(new THREE.Points(starGeom, starMat));
+
+  // ---------- Pétalos flotantes ambientales (siempre visibles) ----------
+  const clock = new THREE.Clock();
+  const petals = [];
+  const petalGroup = new THREE.Group();
+  scene.add(petalGroup);
+  function spawnPetal(burst){
+    const tex = Math.random()<0.5 ? petalFucsiaTex : petalRedTex;
+    const mat = new THREE.SpriteMaterial({ map:tex, transparent:true, opacity: burst? 0.9: 0.55, blending:THREE.AdditiveBlending, depthWrite:false });
+    const s = new THREE.Sprite(mat);
+    const scale = 0.25 + Math.random()*0.3;
+    s.scale.set(scale, scale, 1);
+    s.position.set((Math.random()-0.5)*14, 6 + Math.random()*4, (Math.random()-0.5)*10 - (burst?2:0));
+    s.userData = {
+      vy: -(0.15 + Math.random()*0.2),
+      vx: (Math.random()-0.5)*0.15,
+      vz: burst ? (2.5 + Math.random()*2.5) : 0,
+      rot: (Math.random()-0.5)*0.02,
+      burst: !!burst,
+      born: clock.getElapsedTime()
+    };
+    petalGroup.add(s);
+    petals.push(s);
+  }
+  for(let i=0;i<45;i++){ spawnPetal(false); petals[petals.length-1].position.y = (Math.random()-0.5)*10; }
+
+  function updatePetals(dt, t){
+    for(let i=petals.length-1;i>=0;i--){
+      const p = petals[i];
+      const d = p.userData;
+      p.position.y += d.vy*dt;
+      p.position.x += d.vx*dt;
+      p.position.z += d.vz*dt;
+      p.material.rotation += d.rot;
+      if(d.burst){
+        p.material.opacity *= 0.985;
+        if(t - d.born > 2.2){
+          petalGroup.remove(p);
+          petals.splice(i,1);
+        }
+      } else if(p.position.y < -6){
+        p.position.y = 6 + Math.random()*3;
+        p.position.x = (Math.random()-0.5)*14;
+      }
+    }
+  }
+
+  // ============================================================
+  // CONTROLES: ARRASTRAR + ZOOM
+  // ============================================================
+  let isDragging=false, prevX=0, prevY=0;
+  let rotY=0.4, rotX=0.15, autoRotate=true;
+  let camDist = 9.5;
+
+  canvas.addEventListener('pointerdown',(e)=>{
+    if(e.pointerType==='touch') return;
+    isDragging=true; autoRotate=false; prevX=e.clientX; prevY=e.clientY;
+  });
+  window.addEventListener('pointerup', (e)=>{
+    if(e.pointerType!=='touch') isDragging=false;
+  });
+  window.addEventListener('pointermove',(e)=>{
+    if(!isDragging || e.pointerType==='touch') return;
+    const dx=e.clientX-prevX, dy=e.clientY-prevY;
+    prevX=e.clientX; prevY=e.clientY;
+    rotY += dx*0.005;
+    rotX += dy*0.005;
+    rotX = Math.max(-1.0, Math.min(1.0, rotX));
+  });
+  canvas.addEventListener('wheel',(e)=>{
+    e.preventDefault();
+    changeZoom(e.deltaY*0.01);
+  }, { passive:false });
+  function changeZoom(amount){
+    camDist = Math.max(4, Math.min(20, camDist + amount));
+    targetCamDist = camDist;
+  }
+  document.getElementById('zoom-out').addEventListener('click',()=> changeZoom(1));
+  document.getElementById('zoom-in').addEventListener('click',()=> changeZoom(-1));
+  let lastPinch=null;
+  canvas.addEventListener('touchstart',(e)=>{
+    if(e.touches.length===1){
+      isDragging=true;
+      autoRotate=false;
+      prevX=e.touches[0].clientX;
+      prevY=e.touches[0].clientY;
+      lastPinch=null;
+    } else if(e.touches.length===2){
+      isDragging=false;
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      lastPinch=Math.sqrt(dx*dx+dy*dy);
+    } else {
+      lastPinch=null;
+    }
+  }, { passive:true });
+  canvas.addEventListener('touchmove',(e)=>{
+    if(e.touches.length===1 && isDragging){
+      const dx=e.touches[0].clientX-prevX;
+      const dy=e.touches[0].clientY-prevY;
+      prevX=e.touches[0].clientX;
+      prevY=e.touches[0].clientY;
+      rotY += dx*Math.PI/window.innerWidth;
+      rotX += dy*Math.PI/window.innerHeight;
+      rotX = Math.max(-1.0, Math.min(1.0, rotX));
+    } else if(e.touches.length===2){
+      isDragging=false;
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(lastPinch!==null){
+        changeZoom((lastPinch-dist)*0.02);
+      }
+      lastPinch = dist;
+    }
+  }, { passive:true });
+  canvas.addEventListener('touchend', (e)=>{
+    lastPinch=null;
+    isDragging=e.touches.length===1;
+  });
+
+  // ============================================================
+  // TRANSICIÓN CINEMATOGRÁFICA ENTRE PÁGINAS
+  // ============================================================
+  const pageGalaxy = document.getElementById('page-galaxy');
+  const pageLetter = document.getElementById('page-letter');
+  const flashEl = document.getElementById('flash');
+  const hintEl = document.querySelector('.hint');
+
+  let transitioning = false;
+  let transitionBoost = 0;
+  let targetCamDist = camDist;
+
+  function playTransition(direction){
+    if(transitioning) return;
+    transitioning = true;
+    autoRotate = true;
+    targetCamDist = 3.2;
+
+    for(let i=0;i<50;i++) spawnPetal(true);
+
+    setTimeout(()=> flashEl.classList.add('show'), 1150);
+
+    setTimeout(()=>{
+      if(direction==='toLetter'){
+        pageGalaxy.classList.remove('active');
+        pageLetter.classList.add('active');
+        hintEl.style.opacity='0';
+      } else {
+        pageLetter.classList.remove('active');
+        pageGalaxy.classList.add('active');
+        hintEl.style.opacity='1';
+      }
+    }, 1500);
+
+    setTimeout(()=>{
+      flashEl.classList.remove('show');
+      targetCamDist = direction==='toLetter' ? 15 : 9.5;
+    }, 1550);
+
+    setTimeout(()=>{
+      transitioning = false;
+      transitionBoost = 0;
+    }, 2100);
+  }
+
+  document.getElementById('enter-btn').addEventListener('click', ()=> playTransition('toLetter'));
+  document.getElementById('back-btn').addEventListener('click', ()=> playTransition('toGalaxy'));
+
+  // ============================================================
+  // RESIZE
+  // ============================================================
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ============================================================
+  // LOOP PRINCIPAL
+  // ============================================================
+  let lastT = 0;
+
+  function animate(){
+    const t = clock.getElapsedTime();
+    const dt = t - lastT; lastT = t;
+
+    if(transitioning){
+      transitionBoost = Math.min(1, transitionBoost + dt*1.4);
+    } else {
+      transitionBoost = Math.max(0, transitionBoost - dt*1.2);
+    }
+
+    const spinSpeed = 0.0016 + transitionBoost*0.05;
+    if(autoRotate || transitioning) rotY += spinSpeed;
+
+    rig.rotation.y = rotY;
+    rig.rotation.x = rotX;
+
+    planet.rotation.y = t*0.15;
+    ring.rotation.z = t*0.05;
+
+    nebulae.forEach((n,i)=> n.material.rotation += 0.0008*(i%2===0?1:-1));
+    coreGlow.material.opacity = 0.75 + Math.sin(t*1.4)*0.15;
+
+    updateFlowers(t);
+    updatePetals(dt, t);
+
+    camDist += (targetCamDist - camDist) * (transitioning ? 0.08 : 0.05);
+    camera.position.set(0, 1.3, camDist);
+    camera.lookAt(0,0,0);
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  const loadingEl = document.getElementById('loading');
+  loadingEl.style.opacity = '0';
+  setTimeout(()=> loadingEl.remove(), 600);
+}
+</script>
+</body>
+</html>
